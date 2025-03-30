@@ -48,6 +48,29 @@
     </div>
 
     <script>
+        <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyATlRpkANfJp9ar23usoGYnQkqziPEh2oM",
+    authDomain: "punten-systeem-de-van-houtte-s.firebaseapp.com",
+    projectId: "punten-systeem-de-van-houtte-s",
+    storageBucket: "punten-systeem-de-van-houtte-s.firebasestorage.app",
+    messagingSenderId: "153865595793",
+    appId: "1:153865595793:web:964471cf75cfb09a7b0830",
+    measurementId: "G-8ZKJ01LVNJ"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+
         let users = JSON.parse(localStorage.getItem("users")) || {
             "liam": { password: "Li@mvh11", role: "user", points: 20, log: [], tasks: [] },
             "kato": { password: "K@tovh14", role: "user", points: 15, log: [], tasks: [] },
