@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Punten Systeem</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
         body { background: linear-gradient(135deg, #74ebd5, #acb6e5); display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center; }
@@ -15,8 +17,6 @@
         button { background: #74ebd5; color: white; cursor: pointer; }
         button:hover { background: #5ac3b6; }
         .delete-btn { background: red; color: white; }
-        .green { color: green; }
-        .red { color: red; }
     </style>
 </head>
 <body>
@@ -47,55 +47,33 @@
         <button onclick="logout()">Uitloggen</button>
     </div>
 
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyATlRpkANfJp9ar23usoGYnQkqziPEh2oM",
-    authDomain: "punten-systeem-de-van-houtte-s.firebaseapp.com",
-    projectId: "punten-systeem-de-van-houtte-s",
-    storageBucket: "punten-systeem-de-van-houtte-s.firebasestorage.app",
-    messagingSenderId: "153865595793",
-    appId: "1:153865595793:web:964471cf75cfb09a7b0830",
-    measurementId: "G-8ZKJ01LVNJ"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
-
     <script>
-
-<input type="text" id="bericht" placeholder="Typ een bericht">
-<button onclick="stuurBericht()">Verstuur</button>
-<p>Laatste bericht: <span id="ontvangen"></span></p>
-
-
-        let users = JSON.parse(localStorage.getItem("users")) || {
-            "liam": { password: "Li@mvh11", role: "user", points: 20, log: [], tasks: [] },
-            "kato": { password: "K@tovh14", role: "user", points: 15, log: [], tasks: [] },
-            "vicky": { password: "beheerder123", role: "admin" }
+        // Firebase-configuratie (vervang deze met jouw gegevens)
+        const firebaseConfig = {
+            apiKey: "JOUW_API_KEY",
+            authDomain: "JOUW_AUTH_DOMAIN",
+            databaseURL: "JOUW_DATABASE_URL",
+            projectId: "JOUW_PROJECT_ID",
+            storageBucket: "JOUW_STORAGE_BUCKET",
+            messagingSenderId: "JOUW_MESSAGING_SENDER_ID",
+            appId: "JOUW_APP_ID"
         };
-
-        function saveUsers() { localStorage.setItem("users", JSON.stringify(users)); }
+        // Initialiseer Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
         function login() {
             let username = document.getElementById("username").value.toLowerCase();
             let password = document.getElementById("password").value;
 
-            if (users[username] && users[username].password === password) {
-                localStorage.setItem("loggedUser", username);
-                showDashboard(username);
-            } else {
-                alert("Ongeldige gebruikersnaam of wachtwoord!");
-            }
+            db.ref(`users/${username}`).get().then(snapshot => {
+                if (snapshot.exists() && snapshot.val().password === password) {
+                    localStorage.setItem("loggedUser", username);
+                    showDashboard(username);
+                } else {
+                    alert("Ongeldige gebruikersnaam of wachtwoord!");
+                }
+            });
         }
 
         function showDashboard(username) {
@@ -103,33 +81,39 @@
             document.getElementById("dashboard").style.display = "block";
             document.getElementById("user").innerText = username;
 
-            if (users[username].role === "admin") {
-                document.getElementById("beheerderControls").style.display = "block";
-                loadAdminView();
-            } else {
-                document.getElementById("userControls").style.display = "block";
-                document.getElementById("userPunten").innerText = users[username].points;
-                updateUserTasks(username);
-                updateUserLog(username);
-            }
+            db.ref(`users/${username}`).on('value', snapshot => {
+                let data = snapshot.val();
+                if (data.role === "admin") {
+                    document.getElementById("beheerderControls").style.display = "block";
+                    loadAdminView();
+                } else {
+                    document.getElementById("userControls").style.display = "block";
+                    document.getElementById("userPunten").innerText = data.points;
+                    updateUserTasks(data.tasks);
+                    updateUserLog(data.log);
+                }
+            });
         }
 
         function loadAdminView() {
             ["liam", "kato"].forEach(user => {
-                let box = document.getElementById(`${user}Box`);
-                box.innerHTML = `
-                    <h4>${user.charAt(0).toUpperCase() + user.slice(1)}</h4>
-                    <p>Saldo: <span id="punten${user}">${users[user].points}</span> punten</p>
-                    <input type="number" id="points${user}" placeholder="Aantal punten (+/-)">
-                    <input type="text" id="reason${user}" placeholder="Reden">
-                    <button onclick="changePoints('${user}')">Verander punten</button>
-                    <h4>Logboek:</h4>
-                    <ul id="log${user}">${users[user].log.map(entry => `<li>${entry}</li>`).join('')}</ul>
-                    <h4>Taken:</h4>
-                    <ul id="tasks${user}">${users[user].tasks.map((task, index) => `<li>${task} <button class='delete-btn' onclick='removeTask("${user}", ${index})'>X</button></li>`).join('')}</ul>
-                    <input type="text" id="task${user}" placeholder="Nieuwe taak">
-                    <button onclick="assignTask('${user}')">Taak geven</button>
-                `;
+                db.ref(`users/${user}`).once('value').then(snapshot => {
+                    let data = snapshot.val();
+                    let box = document.getElementById(`${user}Box`);
+                    box.innerHTML = `
+                        <h4>${user.charAt(0).toUpperCase() + user.slice(1)}</h4>
+                        <p>Saldo: <span id="punten${user}">${data.points}</span> punten</p>
+                        <input type="number" id="points${user}" placeholder="Aantal punten (+/-)">
+                        <input type="text" id="reason${user}" placeholder="Reden">
+                        <button onclick="changePoints('${user}')">Verander punten</button>
+                        <h4>Logboek:</h4>
+                        <ul id="log${user}">${data.log.map(entry => `<li>${entry}</li>`).join('')}</ul>
+                        <h4>Taken:</h4>
+                        <ul id="tasks${user}">${data.tasks.map((task, index) => `<li>${task} <button class='delete-btn' onclick='removeTask("${user}", ${index})'>X</button></li>`).join('')}</ul>
+                        <input type="text" id="task${user}" placeholder="Nieuwe taak">
+                        <button onclick="assignTask('${user}')">Taak geven</button>
+                    `;
+                });
             });
         }
 
@@ -138,43 +122,50 @@
             let reason = document.getElementById(`reason${user}`).value;
 
             if (!isNaN(amount) && reason) {
-                users[user].points += amount;
-                users[user].log.push(`<span class='${amount > 0 ? "green" : "red"}'>${amount} punten: ${reason}</span>`);
-                saveUsers();
-                loadAdminView();
+                db.ref(`users/${user}`).get().then(snapshot => {
+                    let data = snapshot.val();
+                    db.ref(`users/${user}`).update({
+                        points: data.points + amount,
+                        log: [...data.log, `${amount} punten: ${reason}`]
+                    });
+                });
             }
         }
 
         function assignTask(user) {
             let task = document.getElementById(`task${user}`).value;
             if (task) {
-                users[user].tasks.push(task);
-                saveUsers();
-                loadAdminView();
+                db.ref(`users/${user}`).get().then(snapshot => {
+                    let data = snapshot.val();
+                    db.ref(`users/${user}`).update({
+                        tasks: [...data.tasks, task]
+                    });
+                });
             }
         }
 
         function removeTask(user, index) {
-            users[user].tasks.splice(index, 1);
-            saveUsers();
-            loadAdminView();
+            db.ref(`users/${user}`).get().then(snapshot => {
+                let data = snapshot.val();
+                data.tasks.splice(index, 1);
+                db.ref(`users/${user}`).update({
+                    tasks: data.tasks
+                });
+            });
         }
 
         function resetLogs() {
             ["liam", "kato"].forEach(user => {
-                users[user].log = [];
-                users[user].tasks = [];
+                db.ref(`users/${user}`).update({ log: [], tasks: [] });
             });
-            saveUsers();
-            loadAdminView();
         }
 
-        function updateUserTasks(user) {
-            document.getElementById("userTasks").innerHTML = users[user].tasks.map(task => `<li>${task}</li>`).join('');
+        function updateUserTasks(tasks) {
+            document.getElementById("userTasks").innerHTML = tasks.map(task => `<li>${task}</li>`).join('');
         }
 
-        function updateUserLog(user) {
-            document.getElementById("userLog").innerHTML = users[user].log.map(entry => `<li>${entry}</li>`).join('');
+        function updateUserLog(log) {
+            document.getElementById("userLog").innerHTML = log.map(entry => `<li>${entry}</li>`).join('');
         }
 
         function logout() {
